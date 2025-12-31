@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Movie Details</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        .container2 {
+            background-color: mediumslateblue;
+            height: 15rem;
+            margin-bottom: 12px;
+            color: white;
+            font-family: Serif;
+            padding-left: 70px;
+            padding-top: 50px;
+            text-align: left;
+        }
+        .btn-second {
+            background-color: grey;
+            color: white;
+            width: 10rem;
+        }
+        footer{
+            background-color: black;
+            text-align: center;
+            padding: 20px;
+            color: white;
+            border-top: 1px solid #ddd;
+            width: 100%;
+            margin-top: 10rem;
+
+        }
+    </style>
+</head>
+<body onload="loadMovieDetails()">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <img src="movie.png" alt="Logo" width="30" height="24" class="d-inline-block align-text-top">
+            Movie Logo Greatest Movies
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="movies_database.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="movieDetails.html">Movie Details </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="aboutUs.html">Latest </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid container2">
+    <h1 id="movieTitle"></h1>
+    <p id="movieRelease"></p>
+    <p id="movieDescription"></p>
+</div>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="card col-md-5 me-3 mb-3" style="width: 35rem; height: 12rem">
+            <div class="card-header">Movie Information</div>
+            <div class="card-body" id="movieInfo"></div>
+        </div>
+
+        <div class="card col-md-6 mb-3" style="width: 35rem; height: 22rem; ">
+            <div class="card-header">Cast and Crew</div>
+            <div class="card-body">
+                <p class="card-text"><strong>Main Cast:</strong></p>
+                <div class="d-flex flex-wrap gap-2" id="movieCast"></div>
+        </div>
+    </div>
+</div>
+
+    <a href="movies_database.html" class="btn btn-second mt-3">Back to Movies</a>
+</div>
+
+<script>
+    async function loadMovieDetails() {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const movieId = params.get("id"); // keep as string
+
+            if (!movieId) {
+                document.getElementById("movieTitle").innerText = "No movie ID provided in URL";
+                return;
+            }
+
+            const resp = await fetch("http://localhost:3000/movies");
+            if (!resp.ok) {
+                throw new Error(`Failed to load JSON (status ${resp.status})`);
+            }
+            const data = await resp.json();
+            const moviesArray = data.movies || data;
+
+            const movie = moviesArray.find(m => m.id === movieId);
+            if (!movie) {
+                document.getElementById("movieTitle").innerText = "Movie not found";
+                return;
+            }
+            document.getElementById("movieTitle").innerText = movie.title || "";
+            document.getElementById("movieRelease").innerText = movie.year ? `Release Date: ${movie.year}` : "";
+            document.getElementById("movieDescription").innerText = movie.description || "";
+
+            document.getElementById("movieInfo").innerHTML = `
+        <p><strong>Director:</strong> ${movie.director || ""}</p>
+        <p><strong>Budget:</strong> ${movie.budget || "$"}</p>
+        <p><strong>Box Office:</strong> ${movie.boxOffice || "$"}</p>
+      `;
+
+            const castContainer = document.getElementById("movieCast");
+            const actorsList = movie.actors && movie.actors.length > 0
+                ? movie.actors
+                : movie.leadActor ? [{ name: movie.leadActor, role: movie.role || "" }] : [];
+
+            actorsList.forEach(actor => {
+                const div = document.createElement("div");
+                div.className = "card p-2";
+                div.style.width = "12rem";
+                div.innerHTML = `<strong>${actor.name}</strong><div class="text-muted">${actor.role}</div>`;
+                castContainer.appendChild(div);
+            });
+        } catch (err) {
+            document.getElementById("movieTitle").innerText = "Error loading the movie details";
+        }
+    }
+</script>
+<footer>
+    &copy; 2024 - Greatest movies. All right reserved
+</footer>
+</body>
+</html>

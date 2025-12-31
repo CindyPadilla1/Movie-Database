@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100" data-bs-theme="auto" xmlns="http://www.w3.org/1999/html">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Greatest Movies</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+  <style>
+    footer {
+      background-color: black;
+      text-align: center;
+      padding: 20px;
+      color: white;
+      border-top: 1px solid #ddd;
+      width: 100%;
+    }
+    .error-msg { color: red; font-size: 0.9rem; }
+    .btn-clear {
+      background-color: white;
+      border: 2px solid green;
+      color: green;
+      font-weight: bold;
+      padding: 5px 15px;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .btn-clear:hover {
+      background-color: green;
+      color: white;
+    }
+    .btn-clear2 {
+      background-color: white;
+      border: 2px solid blue;
+      color: blue;
+      font-weight: bold;
+      padding: 5px 15px;
+      border-radius: 6px;
+    }
+
+    .btn-clear:hover {
+      background-color: blue;
+      color: white;
+    }
+    .btn-blue {
+      background-color: deepskyblue;
+      border: none;
+      transition: all 0.3s ease;
+      color: black;
+    }
+    .btn-blue:hover {
+      background-color: #5DADE2; /* darker blue on hover */
+      color: white;
+    }
+  </style>
+  <script>
+    let movieData = [];
+    const PORT = 3000;
+    const BASE_URL = `http://localhost:${PORT}/movies`;
+
+    async function loadMovies() {
+      try {
+        const response = await fetch(BASE_URL);
+        const data = await response.json();
+        movieData = data.movies || data;
+        showMovies(movieData);
+        populateDirectorFilter(movieData);
+      } catch (err) {
+        alert("Failed to load movies. Please try again.");
+      }
+    }
+
+    function showMovies(movies) {
+      const tableBody = document.getElementById("moviesTableBody");
+      tableBody.innerHTML = "";
+
+      if (movies.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="6" class="text-center">No movies available</td></tr>`;
+        return;
+      }
+
+      movies.forEach(movie => {
+        const leadActor = movie.leadActor
+                || (movie.actors && movie.actors.length > 0 ? movie.actors[0].name : "");
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${movie.title}</td>
+          <td>${movie.director || ""}</td>
+          <td>${movie.year || ""}</td>
+          <td>${movie.boxOffice || ""}</td>
+          <td>${leadActor}</td>
+          <td>
+            <a href="movieDetails.html?id=${movie.id}" class="btn btn-blue btn-sm">View Details</a>
+            <button class="btn btn-danger btn-sm ms-2" onclick="deleteMovie('${movie.id}')">Delete</button>
+          </td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+    function clearForm() {
+      document.getElementById("addMovieForm").reset();
+      document.querySelectorAll(".error-msg").forEach(e => e.textContent = "");
+      document.getElementById("successMessage").innerHTML = "";
+    }
+
+    function validateAndAddMovie() {
+      document.querySelectorAll(".error-msg").forEach(e => e.textContent = "");
+      document.getElementById("successMessage").innerHTML = "";
+
+      const title = document.getElementById("movieTitle").value.trim();
+      const yearValue = document.getElementById("movieYear").value.trim();
+      const year = parseInt(yearValue);
+      const description = document.getElementById("movieDescription").value.trim();
+      const director = document.getElementById("movieDirector").value.replace(/[$M]/g, "").trim();
+      const budgetValue = document.getElementById("movieBudget").value.replace(/[$M]/g, "").trim();
+      const budget = parseFloat(budgetValue);
+      const leadActor = document.getElementById("movieLeadActor").value.trim();
+      const role = document.getElementById("movieRole").value.trim();
+
+      let hasAnError = false;
+      const currentYear = new Date().getFullYear();
+
+      if (!title) {
+        document.getElementById("titleError").textContent = "Title is required.";
+        hasAnError = true;
+      } else if (title.length < 3) {
+        document.getElementById("titleError").textContent = "Title must be at least 3 characters.";
+        hasAnError = true;
+      }
+
+      if (!yearValue) {
+        document.getElementById("yearError").textContent = "Year is required.";
+        hasAnError = true;
+      } else if (isNaN(year) || year < 1880 || year > currentYear) {
+        document.getElementById("yearError").textContent = `Year must be between 1880 and ${currentYear}.`;
+        hasAnError = true;
+      }
+
+      if (!description) {
+        document.getElementById("descriptionError").textContent = "Description is required.";
+        hasAnError = true;
+      } else if (description.length < 10 || description.length > 500) {
+        document.getElementById("descriptionError").textContent = "Description must be 10–500 characters.";
+        hasAnError = true;
+      }
+
+      if (!director) {
+        document.getElementById("directorError").textContent = "Director is required.";
+        hasAnError = true;
+      } else if (director.length < 3) {
+        document.getElementById("directorError").textContent = "Director must be at least 3 characters.";
+        hasAnError = true;
+      }
+
+      if (!budgetValue) {
+        document.getElementById("budgetError").textContent = "Budget is required.";
+        hasAnError = true;
+      } else if (isNaN(budget) || budget < 1 || budget > 1000) {
+        document.getElementById("budgetError").textContent = "Budget must be between 1 and 1000 Million";
+        hasAnError = true;
+      }
+
+      if (!leadActor) {
+        document.getElementById("leadActorError").textContent = "Lead actor is required.";
+        hasAnError = true;
+      } else if (leadActor.split(" ").length < 2 || leadActor.length < 4) {
+        document.getElementById("leadActorError").textContent = "Lead actor must be at least 2 words and >3 characters.";
+        hasAnError = true;
+      }
+
+      if (!role) {
+        document.getElementById("roleError").textContent = "Role is required.";
+        hasAnError = true;
+      } else if (role.length < 3) {
+        document.getElementById("roleError").textContent = "Role must be at least 3 characters.";
+        hasAnError = true;
+      }
+      if (hasAnError) return;
+
+      const newMovie = {
+        id: Date.now().toString(),
+        title, year, description, director, budget, boxOffice: "",
+        leadActor, role
+      };
+
+      fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newMovie)
+      })
+              .then(res => {
+                if (!res.ok) throw new Error("Failed to add movie");
+                return res.json();
+              })
+              .then(data => {
+                loadMovies();
+                document.getElementById("addMovieForm").reset();
+                document.getElementById("successMessage").innerHTML = `
+    <div class="alert alert-primary">Movie successfully added!</div>
+  `;
+              })
+              .catch(err => {
+                alert("Error adding movie!");
+              });
+    }
+
+
+    function populateDirectorFilter(movies) {
+      const directorFilter = document.getElementById("directorFilter");
+      directorFilter.innerHTML = '<option value="">All Directors</option>';
+      const directors = [...new Set(movies.map(m => m.director).filter(Boolean))];
+      directors.forEach(d => {
+        const option = document.createElement("option");
+        option.value = d;
+        option.textContent = d;
+        directorFilter.appendChild(option);
+      });
+    }
+
+    function filterByDirector() {
+      const selected = document.getElementById("directorFilter").value.toLowerCase();
+      if (!selected) {
+        showMovies(movieData);
+      } else {
+        const filtered = movieData.filter(m => m.director && m.director.toLowerCase() === selected);
+        showMovies(filtered);
+      }
+    }
+
+    function clearFilter() {
+      document.getElementById("directorFilter").value = "";
+      showMovies(movieData);
+    }
+
+    async function deleteMovie(id) {
+      if (!confirm("Are you sure you want to delete this movie?")) return;
+      try {
+        const response = await fetch(`${BASE_URL}/${id}`, { method: "DELETE" });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        alert("Movie deleted");
+        loadMovies();
+      } catch (err) {
+        alert("Failed to delete movie.");
+      }
+    }
+  </script>
+</head>
+<body onload="loadMovies()">
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container">
+    <a class="navbar-brand" href="#">
+      <img src="movie.png" alt="Logo" width="30" height="24" class="d-inline-block align-text-top">
+      Greatest Movies
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav ms-auto">
+        <li class="nav-item"><a class="nav-link active" href="#">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="aboutUs.html">Top Rated</a></li>
+        <li class="nav-item"><a class="nav-link" href="aboutUs.html">Latest</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div class="container mt-4">
+  <h1 class="mb-4 text-center">Greatest Movies of All Time</h1>
+
+  <div id="successMessage"></div>
+  <div class="card shadow-lg border-primary mb-5">
+    <div class="card-header bg-primary text-white">
+      <h3 class="mb-0">Add New Movie</h3>
+    </div>
+    <div class="card-body">
+      <form id="addMovieForm" novalidate onsubmit="event.preventDefault(); validateAndAddMovie();">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="movieTitle" class="form-label">Movie Title *</label>
+            <input type="text" class="form-control" id="movieTitle" >
+            <div id="titleError" class="error-msg"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="movieYear" class="form-label">Release Year *</label>
+            <input type="text" class="form-control" id="movieYear" >
+            <div id="yearError" class="error-msg"></div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label for="movieDescription" class="form-label">Description *</label>
+          <textarea class="form-control" id="movieDescription" ></textarea>
+          <div id="descriptionError" class="error-msg"></div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="movieDirector" class="form-label">Director</label>
+            <input type="text" class="form-control" id="movieDirector" placeholder="Director">
+            <div id="directorError" class="error-msg"></div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="movieBudget" class="form-label">Budget</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="text" class="form-control" id="movieBudget" placeholder="e.g 100M">
+              <span class="input-group-text">M</span>
+            </div>
+            <div id="budgetError" class="error-msg"></div>
+          </div>
+          <div class="col-md-3 mb-3">
+            <label for="movieBoxOffice" class="form-label">Box Office</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="text" class="form-control" id="movieBoxOffice" placeholder="e.g 103M">
+              <span class="input-group-text">M/B</span>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="movieLeadActor" class="form-label">Lead Actor</label>
+            <input type="text" class="form-control" id="movieLeadActor"placeholder="Actor Name">
+            <div id="leadActorError" class="error-msg"></div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="movieRole" class="form-label">Character/Role</label>
+            <input type="text" class="form-control" id="movieRole" placeholder="Character/Role">
+            <div id="roleError" class="error-msg"></div>
+          </div>
+        </div>
+        <div class="d-flex justify-content-between">
+          <button type="button" class="btn btn-clear2" onclick="clearForm()">Clear</button>
+          <button type="submit" class="btn btn-primary">Add Movie</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card shadow-lg border-success mb-5">
+    <div class="card-header bg-success text-white">
+      <h3 class="mb-0">Filter Movies By Director</h3>
+    </div>
+    <div class="card-body">
+      <div class="row align-items-end">
+        <div class="col-md-8 d-flex align-items-end">
+          <div class="flex-grow-1">
+            <label for="directorFilter" class="form-label">Select Director</label>
+            <select class="form-control" id="directorFilter" onchange="filterByDirector()"></select>
+          </div>
+        </div>
+      <div class="col-md-4 mb-3 d-flex align-items-end">
+        <button type="button" class="btn btn-clear ms-2" onclick="clearFilter()">Clear</button>
+      </div>
+    </div>
+   </div>
+</div>
+
+  <div class="card shadow-lg mb-5 g-5">
+    <div class="card-header bg-secondary text-white">
+      <h3 class="mb-0">Current Movies Database</h3>
+    </div>
+  <div class="card-body table-responsive mb-5 pt-3">
+    <table class="table table-striped table-hover">
+      <thead class="table-dark">
+      <tr>
+        <th>Title</th>
+        <th>Director</th>
+        <th>Year</th>
+        <th>Box Office</th>
+        <th>Lead Actor</th>
+        <th>Actions</th>
+      </tr>
+      </thead>
+      <tbody id="moviesTableBody">
+      <tr>
+        <td colspan="6" class="text-center">Loading movies.....</td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</div>
+
+<footer>
+  &copy; 2024 - Greatest Movies. All rights reserved.
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
